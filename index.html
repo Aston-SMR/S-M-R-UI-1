@@ -431,101 +431,320 @@
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function(){
+document.addEventListener('DOMContentLoaded', function () {
+  let values = ['', '', '', '', '', ''];
+  let order = [0, 1, 2, 3, 4, 5];
+  let currentStep = 0;
+  let selectedIndex = null;
+  let historyData = [];
 
-let values = ['', '', '', '', '', ''];
-let order = [0, 1, 2, 3, 4, 5];
-let currentStep = 0;
-let selectedIndex = null;
-let historyData = [];
+  const cards = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+  const buttonsDiv = document.getElementById('buttons');
+  const cells = document.querySelectorAll('.cell');
 
-const cards = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-const buttonsDiv = document.getElementById('buttons');
-const cells = document.querySelectorAll('.cell');
-
-// 🔥 強制重建按鍵（避免沒出現）
-buttonsDiv.innerHTML = '';
-
-cards.forEach(c => {
-  const btn = document.createElement('button');
-  btn.className = 'key';
-  btn.textContent = c;
-  btn.onclick = () => inputCard(c);
-  buttonsDiv.appendChild(btn);
-});
-
-const skipBtn = document.createElement('button');
-skipBtn.className = 'key skip-key';
-skipBtn.textContent = '不補';
-skipBtn.onclick = () => skip();
-buttonsDiv.appendChild(skipBtn);
-
-cells.forEach(cell => {
-  cell.onclick = () => {
-    selectedIndex = parseInt(cell.dataset.index);
-    highlight();
-  };
-});
-
-function inputCard(card) {
-  if (selectedIndex !== null) {
-    values[selectedIndex] = card;
-    selectedIndex = null;
-  } else if (currentStep < 6) {
-    values[order[currentStep]] = card;
-    currentStep++;
-  }
-  render();
-}
-
-function skip() {
-  if (selectedIndex !== null) {
-    values[selectedIndex] = '';
-    selectedIndex = null;
-    render();
-    return;
-  }
-  if (currentStep < 6) {
-    currentStep++;
-    render();
-  }
-}
-
-function getValue(card) {
-  if (!card) return 0;
-  if (card === 'A') return 1;
-  if (['10', 'J', 'Q', 'K'].includes(card)) return 0;
-  return parseInt(card, 10) || 0;
-}
-
-function render() {
-  cells.forEach(cell => {
-    const idx = parseInt(cell.dataset.index, 10);
-    const val = values[idx];
-    cell.textContent = val;
-    if (val) cell.classList.remove('empty');
-    else cell.classList.add('empty');
+  buttonsDiv.innerHTML = '';
+  cards.forEach((c) => {
+    const btn = document.createElement('button');
+    btn.className = 'key';
+    btn.textContent = c;
+    btn.onclick = () => inputCard(c);
+    buttonsDiv.appendChild(btn);
   });
-  highlight();
-}
+  const skipBtn = document.createElement('button');
+  skipBtn.className = 'key skip-key';
+  skipBtn.textContent = '不補';
+  skipBtn.onclick = () => skip();
+  buttonsDiv.appendChild(skipBtn);
 
-function highlight() {
-  cells.forEach(c => c.classList.remove('active'));
-  if (selectedIndex !== null) {
-    document.querySelector(`[data-index='${selectedIndex}']`).classList.add('active');
+  cells.forEach((cell) => {
+    cell.onclick = () => {
+      selectedIndex = parseInt(cell.dataset.index, 10);
+      highlight();
+    };
+  });
+
+  function inputCard(card) {
+    if (selectedIndex !== null) {
+      values[selectedIndex] = card;
+      selectedIndex = null;
+    } else if (currentStep < 6) {
+      values[order[currentStep]] = card;
+      currentStep++;
+    }
+    render();
   }
-}
 
-function clearBoard() {
-  values = ['', '', '', '', '', ''];
-  currentStep = 0;
-  selectedIndex = null;
+  function skip() {
+    if (selectedIndex !== null) {
+      values[selectedIndex] = '';
+      selectedIndex = null;
+      render();
+      return;
+    }
+    if (currentStep < 6) {
+      currentStep++;
+      render();
+    }
+  }
+
+  function getValue(card) {
+    if (!card) return 0;
+    if (card === 'A') return 1;
+    if (['10', 'J', 'Q', 'K'].includes(card)) return 0;
+    return parseInt(card, 10) || 0;
+  }
+
+  function getCards(arr) {
+    return arr.filter(Boolean);
+  }
+
+  function isNatural(p2, b2) {
+    return p2 >= 8 || b2 >= 8;
+  }
+
+  function shouldPlayerDraw(p2) {
+    return p2 <= 5;
+  }
+
+  function shouldBankerDraw(b2, playerThird, playerDrew) {
+    if (!playerDrew) return b2 <= 5;
+    const pt = getValue(playerThird);
+    if (b2 <= 2) return true;
+    if (b2 === 3) return pt !== 8;
+    if (b2 === 4) return pt >= 2 && pt <= 7;
+    if (b2 === 5) return pt >= 4 && pt <= 7;
+    if (b2 === 6) return pt === 6 || pt === 7;
+    return false;
+  }
+
+  function getActualResultLabel(playerTotal, bankerTotal) {
+    if (playerTotal > bankerTotal) return '閒';
+    if (bankerTotal > playerTotal) return '莊';
+    return '和';
+  }
+
+  function getWinnerTextClass(result) {
+    if (result === '閒贏') return 'winner-player';
+    if (result === '莊贏') return 'winner-banker';
+    return 'winner-tie';
+  }
+
+  function getPickClass(pick) {
+    if (pick === '閒') return 'pick-player';
+    if (pick === '莊') return 'pick-banker';
+    if (pick === '和') return 'pick-tie';
+    return 'pick-pending';
+  }
+
+  function evaluateS(allCards) {
+    if (allCards.length === 0) return { pick: '待輸入', meta: '分數：-', raw: null };
+    let score = 0;
+    allCards.forEach((card) => {
+      if (card === '8') score += 4;
+      else if (card === '9' || card === 'A') score += 3;
+      else if (card === '2' || card === '3') score += 2;
+      else if (card === '4' || card === '5') score += 1;
+    });
+    return { pick: score > 5 ? '閒' : '莊', meta: `分數：${score}`, raw: score };
+  }
+
+  function evaluateM(playerCards, bankerCards, allCards) {
+    if (playerCards.length < 2 || bankerCards.length < 2) {
+      return { pick: '待輸入', meta: '點差：-\n公牌奇偶：-', raw: null };
+    }
+    const playerTotalRaw = playerCards.reduce((s, c) => s + getValue(c), 0);
+    const bankerTotalRaw = bankerCards.reduce((s, c) => s + getValue(c), 0);
+    const diff = playerTotalRaw - bankerTotalRaw;
+    const sign1 = diff >= 0 ? '正' : '負';
+    const publicCount = allCards.filter((c) => ['10', 'J', 'Q', 'K'].includes(c)).length;
+    const sign2 = publicCount % 2 === 0 ? '正' : '負';
+    const finalSign = sign1 === sign2 ? '正' : '負';
+    const pick = finalSign === '正' ? '閒' : '莊';
+    return {
+      pick,
+      meta: `點差：${diff}（閒${playerTotalRaw} - 莊${bankerTotalRaw}）\n公牌奇偶：${publicCount}${publicCount % 2 === 0 ? '張=正' : '張=負'}`,
+      raw: { diff, publicCount, finalSign },
+    };
+  }
+
+  function evaluateR(playerCards, bankerCards, allCards) {
+    if (playerCards.length < 2 || bankerCards.length < 2) {
+      return { pick: '待輸入', meta: '尾數：-\n翻邊：-', raw: null };
+    }
+    const playerRaw = playerCards.reduce((s, c) => s + getValue(c), 0);
+    const bankerRaw = bankerCards.reduce((s, c) => s + getValue(c), 0);
+    const tail = (playerRaw % 10) + (bankerRaw % 10);
+    let basePick = tail === 19 ? '閒' : '莊';
+    const totalCards = allCards.length;
+    const publicCount = allCards.filter((c) => ['10', 'J', 'Q', 'K'].includes(c)).length;
+    const flip = totalCards === 5 || totalCards === 6 || (totalCards === 4 && publicCount === 0);
+    const pick = flip ? (basePick === '閒' ? '莊' : '閒') : basePick;
+    return { pick, meta: `尾數：${tail}\n翻邊：${flip ? '是' : '否'}`, raw: { tail, flip } };
+  }
+
+  function getRoundState() {
+    const playerCards = getCards([values[0], values[1], values[4]]);
+    const bankerCards = getCards([values[2], values[3], values[5]]);
+    const allCards = [...playerCards, ...bankerCards];
+    const p2 = (getValue(values[0]) + getValue(values[1])) % 10;
+    const b2 = (getValue(values[2]) + getValue(values[3])) % 10;
+    const playerThird = values[4] || null;
+    const bankerThird = values[5] || null;
+
+    let info = '請依序輸入牌面';
+    if (values[0] && values[1] && values[2] && values[3]) {
+      if (isNatural(p2, b2)) {
+        info = '天牌（不補）';
+      } else {
+        info = '';
+        if (playerThird === null) info += shouldPlayerDraw(p2) ? '閒應補牌 ' : '閒不補 ';
+        if (bankerThird === null) {
+          if (playerThird === null && shouldPlayerDraw(p2)) info += '莊待閒第三張後判定';
+          else info += shouldBankerDraw(b2, playerThird, playerThird !== null) ? '莊應補牌' : '莊不補';
+        }
+        if (!info.trim()) info = '本局已輸入完成';
+      }
+    }
+
+    const playerTotal = playerCards.reduce((s, c) => s + getValue(c), 0) % 10;
+    const bankerTotal = bankerCards.reduce((s, c) => s + getValue(c), 0) % 10;
+    const actual = getActualResultLabel(playerTotal, bankerTotal);
+
+    return {
+      playerCards,
+      bankerCards,
+      allCards,
+      playerTotal,
+      bankerTotal,
+      actual,
+      info,
+      s: evaluateS(allCards),
+      m: evaluateM(playerCards, bankerCards, allCards),
+      r: evaluateR(playerCards, bankerCards, allCards),
+    };
+  }
+
+  function renderSMR(state) {
+    const sPick = document.getElementById('sPick');
+    const mPick = document.getElementById('mPick');
+    const rPick = document.getElementById('rPick');
+    sPick.textContent = state.s.pick;
+    mPick.textContent = state.m.pick;
+    rPick.textContent = state.r.pick;
+    sPick.className = `smr-pick ${getPickClass(state.s.pick)}`;
+    mPick.className = `smr-pick ${getPickClass(state.m.pick)}`;
+    rPick.className = `smr-pick ${getPickClass(state.r.pick)}`;
+    document.getElementById('sMeta').textContent = state.s.meta;
+    document.getElementById('mMeta').textContent = state.m.meta;
+    document.getElementById('rMeta').textContent = state.r.meta;
+  }
+
+  function calc() {
+    const state = getRoundState();
+    document.getElementById('playerScore').textContent = `閒 ${state.playerTotal}`;
+    document.getElementById('bankerScore').textContent = `莊 ${state.bankerTotal}`;
+    const winnerText = state.actual === '閒' ? '閒贏' : state.actual === '莊' ? '莊贏' : '和局';
+    const winnerEl = document.getElementById('winnerText');
+    winnerEl.textContent = winnerText;
+    winnerEl.className = `winner-text ${getWinnerTextClass(winnerText)}`;
+    document.getElementById('detailText').textContent = state.info;
+    renderSMR(state);
+  }
+
+  function render() {
+    cells.forEach((cell) => {
+      const idx = parseInt(cell.dataset.index, 10);
+      const val = values[idx];
+      cell.textContent = val;
+      if (val) cell.classList.remove('empty');
+      else cell.classList.add('empty');
+    });
+    highlight();
+    calc();
+  }
+
+  function highlight() {
+    cells.forEach((c) => c.classList.remove('active'));
+    if (selectedIndex !== null) {
+      const target = document.querySelector(`[data-index='${selectedIndex}']`);
+      if (target) target.classList.add('active');
+    }
+  }
+
+  function getHistoryStatus(prediction, actual) {
+    if (actual === '和') return '-';
+    if (prediction !== '閒' && prediction !== '莊') return '-';
+    return prediction === actual ? '準' : '失敗';
+  }
+
+  function getHistoryClass(status) {
+    if (status === '準') return 'history-result hit';
+    if (status === '失敗') return 'history-result miss';
+    return 'history-result draw';
+  }
+
+  function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (!list) return;
+    if (historyData.length === 0) {
+      list.innerHTML = '<div class="history-empty">目前還沒有歷史紀錄</div>';
+      return;
+    }
+    list.innerHTML = historyData.map((item) => `
+      <div class="history-item">
+        <div class="history-top">
+          <div class="history-cards">
+            <div><strong>閒牌面：</strong>${item.player || '-'}</div>
+            <div><strong>莊牌面：</strong>${item.banker || '-'}</div>
+          </div>
+          <div class="history-result draw">實際：${item.actual}</div>
+        </div>
+        <div class="history-smr">
+          S：${item.sPick}（${item.sStatus}）<br>
+          M：${item.mPick}（${item.mStatus}）<br>
+          R：${item.rPick}（${item.rStatus}）
+        </div>
+      </div>
+    `).join('');
+  }
+
+  window.saveRoundAndNext = function () {
+    const state = getRoundState();
+    if (state.playerCards.length < 2 || state.bankerCards.length < 2) {
+      alert('請至少先輸入閒家與莊家的前兩張牌。');
+      return;
+    }
+    historyData.unshift({
+      player: state.playerCards.join(' '),
+      banker: state.bankerCards.join(' '),
+      actual: state.actual,
+      sPick: state.s.pick,
+      mPick: state.m.pick,
+      rPick: state.r.pick,
+      sStatus: getHistoryStatus(state.s.pick, state.actual),
+      mStatus: getHistoryStatus(state.m.pick, state.actual),
+      rStatus: getHistoryStatus(state.r.pick, state.actual),
+    });
+    renderHistory();
+    clearBoard();
+  };
+
+  window.clearHistory = function () {
+    historyData = [];
+    renderHistory();
+  };
+
+  window.clearBoard = function () {
+    values = ['', '', '', '', '', ''];
+    currentStep = 0;
+    selectedIndex = null;
+    render();
+  };
+
   render();
-}
-
-render();
-
+  renderHistory();
 });
 </script>
 </body>
 </html>
+
