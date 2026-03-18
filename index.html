@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>百家樂輸入面板</title>
+<style>
+  :root {
+    --bg: #f5f7fb;
+    --card: #ffffff;
+    --border: #d8deea;
+    --text: #1f2937;
+    --muted: #6b7280;
+    --player-bg: #eef5ff;
+    --player-border: #93c5fd;
+    --banker-bg: #fff1f2;
+    --banker-border: #fda4af;
+    --active: #fff7cc;
+    --active-border: #f59e0b;
+    --win-player: #2563eb;
+    --win-banker: #dc2626;
+    --win-tie: #059669;
+    --soft-btn: #eef2f7;
+    --soft-btn-border: #cbd5e1;
+    --smr-bg: #f8fafc;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: Arial, "Microsoft JhengHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 14px;
+  }
+
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    padding: 14px;
+  }
+
+  .top-box {
+    display: flex;
+    gap: 12px;
+  }
+
+  .side {
+    flex: 1;
+    border-radius: 16px;
+    padding: 12px;
+    border: 2px solid transparent;
+  }
+
+  .player-side {
+    background: var(--player-bg);
+    border-color: var(--player-border);
+  }
+
+  .banker-side {
+    background: var(--banker-bg);
+    border-color: var(--banker-border);
+  }
+
+  .title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    margin-bottom: 10px;
+    text-align: center;
+  }
+
+  .sub-title {
+    display: block;
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 600;
+    margin-top: 3px;
+  }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .cell {
+    height: 62px;
+    border: 2px solid #d6dce8;
+    border-radius: 14px;
+    background: rgba(255,255,255,0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.15s ease;
+    user-select: none;
+  }
+
+  .cell:hover { transform: translateY(-1px); }
+  .cell.empty::after { font-size: 12px; font-weight: 600; color: #94a3b8; }
+  .cell.p1.empty::after { content: 'P1'; }
+  .cell.p2.empty::after { content: 'P2'; }
+  .cell.p3.empty::after { content: 'P3'; }
+  .cell.b1.empty::after { content: 'B1'; }
+  .cell.b2.empty::after { content: 'B2'; }
+  .cell.b3.empty::after { content: 'B3'; }
+  .span2 { grid-column: 1 / span 2; }
+
+  .active {
+    background: var(--active);
+    border-color: var(--active-border);
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+  }
+
+  .result-card,
+  .smr-card,
+  .history-card {
+    margin-top: 14px;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 14px;
+  }
+
+  .score-row,
+  .smr-head,
+  .history-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .score-main {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .score-badge {
+    min-width: 92px;
+    padding: 8px 12px;
+    border-radius: 999px;
+    font-size: 15px;
+    font-weight: 700;
+    text-align: center;
+    background: #eef2ff;
+  }
+
+  .score-badge.player { color: var(--win-player); }
+  .score-badge.banker { color: var(--win-banker); background: #fff1f2; }
+
+  .winner-text { font-size: 24px; font-weight: 800; letter-spacing: 0.5px; }
+  .winner-player { color: var(--win-player); }
+  .winner-banker { color: var(--win-banker); }
+  .winner-tie { color: var(--win-tie); }
+
+  .clear-btn-inline,
+  .next-btn,
+  .history-clear-btn {
+    border: 1px solid var(--soft-btn-border);
+    background: var(--soft-btn);
+    color: #475569;
+    border-radius: 10px;
+    padding: 7px 10px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .next-btn { background: #eff6ff; color: #1d4ed8; border-color: #bfdbfe; }
+  .history-clear-btn { background: #fff1f2; color: #b91c1c; border-color: #fecdd3; }
+
+  .detail-text {
+    margin-top: 10px;
+    text-align: left;
+    font-size: 15px;
+    line-height: 1.5;
+    color: #334155;
+  }
+
+  .detail-label,
+  .section-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    margin-bottom: 6px;
+  }
+
+  .smr-grid {
+    margin-top: 10px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+  }
+
+  .smr-box {
+    background: var(--smr-bg);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px;
+  }
+
+  .smr-name {
+    font-size: 13px;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .smr-pick {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 4px;
+  }
+
+  .smr-meta {
+    font-size: 13px;
+    color: #475569;
+    line-height: 1.45;
+    white-space: pre-line;
+  }
+
+  .pick-player { color: var(--win-player); }
+  .pick-banker { color: var(--win-banker); }
+  .pick-tie { color: var(--win-tie); }
+  .pick-pending { color: #64748b; }
+
+  .buttons-wrap {
+    margin-top: 16px;
+  }
+
+  .buttons {
+    margin-top: 16px;
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    grid-template-rows: repeat(2, auto);
+    gap: 6px;
+    width: 100%;
+  }
+
+  button.key {
+    border: 1px solid #cfd8e3;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 10px 4px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    cursor: pointer;
+    min-height: 46px;
+  }
+
+  .skip-key { background: #f3f4f6 !important; color: #4b5563 !important; }
+
+  .history-list {
+    margin-top: 10px;
+    max-height: 320px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .history-empty {
+    color: var(--muted);
+    font-size: 14px;
+    padding: 8px 0;
+  }
+
+  .history-item {
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px;
+    background: #fff;
+  }
+
+  .history-top {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .history-cards {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .history-smr {
+    color: #6b7280;
+    font-size: 13px;
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .history-result {
+    font-size: 14px;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 6px 10px;
+    background: #f8fafc;
+  }
+
+  .hit { color: #065f46; background: #ecfdf5; }
+  .miss { color: #991b1b; background: #fef2f2; }
+  .draw { color: #475569; background: #f8fafc; }
+
+  button.key:active,
+  .clear-btn-inline:active,
+  .next-btn:active,
+  .history-clear-btn:active {
+    transform: scale(0.98);
+  }
+
+  @media (max-width: 500px) {
+    .container { padding: 10px; }
+    .panel { padding: 10px; border-radius: 16px; }
+    .top-box { gap: 8px; }
+    .side { padding: 10px 8px; border-radius: 14px; }
+    .title { font-size: 16px; }
+    .cell { height: 56px; font-size: 21px; border-radius: 12px; }
+    .winner-text { font-size: 21px; }
+    .score-badge { min-width: 84px; font-size: 14px; padding: 7px 10px; }
+    .detail-text { font-size: 14px; }
+    .smr-grid { grid-template-columns: 1fr; }
+    .buttons { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 5px; grid-template-rows: repeat(2, auto); }
+    button.key { min-height: 42px; padding: 8px 2px; font-size: 13px; border-radius: 10px; }
+    .clear-btn-inline, .next-btn, .history-clear-btn { padding: 6px 9px; font-size: 12px; }
+    .smr-pick { font-size: 20px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="panel">
+    <div class="top-box">
+      <div class="side player-side">
+        <div class="title">PLAYER<span class="sub-title">閒家</span></div>
+        <div class="grid">
+          <div class="cell empty p1" data-index="0"></div>
+          <div class="cell empty p2" data-index="1"></div>
+          <div class="cell empty p3 span2" data-index="4"></div>
+        </div>
+      </div>
+
+      <div class="side banker-side">
+        <div class="title">BANKER<span class="sub-title">莊家</span></div>
+        <div class="grid">
+          <div class="cell empty b1" data-index="2"></div>
+          <div class="cell empty b2" data-index="3"></div>
+          <div class="cell empty b3 span2" data-index="5"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="result-card">
+      <div class="score-row">
+        <div class="score-main">
+          <div class="score-badge player" id="playerScore">閒 0</div>
+          <div class="score-badge banker" id="bankerScore">莊 0</div>
+          <div class="winner-text winner-tie" id="winnerText">和局</div>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button class="next-btn" onclick="saveRoundAndNext()">下一局</button>
+          <button class="clear-btn-inline" onclick="clearBoard()">清除本局</button>
+        </div>
+      </div>
+      <div class="detail-text">
+        <div class="detail-label">判斷資訊</div>
+        <div id="detailText">請依序輸入牌面</div>
+      </div>
+    </div>
+
+    <div class="smr-card">
+      <div class="smr-head">
+        <div>
+          <div class="section-title">SMR 預測</div>
+          <div style="font-size:14px;color:#475569;">依你提供的 S / M / R 規則即時判定</div>
+        </div>
+      </div>
+      <div class="smr-grid">
+        <div class="smr-box">
+          <div class="smr-name">S</div>
+          <div class="smr-pick pick-pending" id="sPick">待輸入</div>
+          <div class="smr-meta" id="sMeta">分數：-</div>
+        </div>
+        <div class="smr-box">
+          <div class="smr-name">M（矩陣）</div>
+          <div class="smr-pick pick-pending" id="mPick">待輸入</div>
+          <div class="smr-meta" id="mMeta">點差：-\n公牌奇偶：-</div>
+        </div>
+        <div class="smr-box">
+          <div class="smr-name">R（跑牌值）</div>
+          <div class="smr-pick pick-pending" id="rPick">待輸入</div>
+          <div class="smr-meta" id="rMeta">尾數：-\n翻邊：-</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="buttons-wrap">
+      <div class="section-title">牌面鍵</div>
+      <div class="buttons" id="buttons"></div>
+    </div>
+
+    <div class="history-card">
+      <div class="history-head">
+        <div>
+          <div class="section-title">歷史紀錄</div>
+          <div style="font-size:14px;color:#475569;">最新在最上，可下拉查看</div>
+        </div>
+        <button class="history-clear-btn" onclick="clearHistory()">清除歷史</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+
+let values = ['', '', '', '', '', ''];
+let order = [0, 1, 2, 3, 4, 5];
+let currentStep = 0;
+let selectedIndex = null;
+let historyData = [];
+
+const cards = ['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+const buttonsDiv = document.getElementById('buttons');
+const cells = document.querySelectorAll('.cell');
+
+// 🔥 強制重建按鍵（避免沒出現）
+buttonsDiv.innerHTML = '';
+
+cards.forEach(c => {
+  const btn = document.createElement('button');
+  btn.className = 'key';
+  btn.textContent = c;
+  btn.onclick = () => inputCard(c);
+  buttonsDiv.appendChild(btn);
+});
+
+const skipBtn = document.createElement('button');
+skipBtn.className = 'key skip-key';
+skipBtn.textContent = '不補';
+skipBtn.onclick = () => skip();
+buttonsDiv.appendChild(skipBtn);
+
+cells.forEach(cell => {
+  cell.onclick = () => {
+    selectedIndex = parseInt(cell.dataset.index);
+    highlight();
+  };
+});
+
+function inputCard(card) {
+  if (selectedIndex !== null) {
+    values[selectedIndex] = card;
+    selectedIndex = null;
+  } else if (currentStep < 6) {
+    values[order[currentStep]] = card;
+    currentStep++;
+  }
+  render();
+}
+
+function skip() {
+  if (selectedIndex !== null) {
+    values[selectedIndex] = '';
+    selectedIndex = null;
+    render();
+    return;
+  }
+  if (currentStep < 6) {
+    currentStep++;
+    render();
+  }
+}
+
+function getValue(card) {
+  if (!card) return 0;
+  if (card === 'A') return 1;
+  if (['10', 'J', 'Q', 'K'].includes(card)) return 0;
+  return parseInt(card, 10) || 0;
+}
+
+function render() {
+  cells.forEach(cell => {
+    const idx = parseInt(cell.dataset.index, 10);
+    const val = values[idx];
+    cell.textContent = val;
+    if (val) cell.classList.remove('empty');
+    else cell.classList.add('empty');
+  });
+  highlight();
+}
+
+function highlight() {
+  cells.forEach(c => c.classList.remove('active'));
+  if (selectedIndex !== null) {
+    document.querySelector(`[data-index='${selectedIndex}']`).classList.add('active');
+  }
+}
+
+function clearBoard() {
+  values = ['', '', '', '', '', ''];
+  currentStep = 0;
+  selectedIndex = null;
+  render();
+}
+
+render();
+
+});
+</script>
+</body>
+</html>
